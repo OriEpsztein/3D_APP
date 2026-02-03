@@ -3,7 +3,7 @@ import os
 import BQ_handler
 import GRAPH
 import SPACES 
-from auth.auth import get_bq_client
+from auth import get_bq_client
 
 # --- 1. Page Setup ---
 st.set_page_config(page_title="3D Sensor Digital Twin", layout="wide")
@@ -164,4 +164,5 @@ if update_plot:
 if st.session_state.current_fig is not None:
     plot_container.plotly_chart(st.session_state.current_fig, use_container_width=True)
 else:
+
     plot_container.info("Select settings above and click 'Update Plot'.")
