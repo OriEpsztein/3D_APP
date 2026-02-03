@@ -2,21 +2,36 @@ import streamlit as st
 import os
 import BQ_handler
 import GRAPH
-import SPACES 
-from auth import get_bq_client
+import SPACES
+from google.oauth2 import service_account
+from google.cloud import bigquery
 
 # --- 1. Page Setup ---
 st.set_page_config(page_title="3D Sensor Digital Twin", layout="wide")
 st.title("🧪 3D Experiment Snapshot")
 
-# --- 2. Connection ---
+# --- 2. Connection (Hybrid: Works on Laptop & Cloud) ---
 @st.cache_resource
 def connect_to_gcp():
+    # Option A: Local Laptop (looks for file)
     env_path = os.path.join("auth", ".env")
-    try:
+    if os.path.exists(env_path):
+        from auth import get_bq_client # Local helper
         return get_bq_client(env_path)
-    except Exception as e:
-        st.error(f"❌ Connection Error: {e}")
+    
+    # Option B: Streamlit Cloud (looks for Secrets)
+    elif "gcp_service_account" in st.secrets:
+        try:
+            # Load the key from the Secrets box you filled
+            key_dict = dict(st.secrets["gcp_service_account"])
+            creds = service_account.Credentials.from_service_account_info(key_dict)
+            return bigquery.Client(credentials=creds, project=key_dict["project_id"])
+        except Exception as e:
+            st.error(f"❌ Cloud Connection Error: {e}")
+            return None
+            
+    else:
+        st.error("❌ No credentials found. (Checked 'auth/.env' and Streamlit Secrets)")
         return None
 
 client = connect_to_gcp()
@@ -31,9 +46,8 @@ if 'current_fig' not in st.session_state: st.session_state.current_fig = None
 # SIDEBAR
 # ==========================================
 
-# --- 0. SPACE CONFIGURATION (New) ---
+# --- 0. SPACE CONFIGURATION ---
 st.sidebar.header("0. Space Configuration")
-# Defaults to the first option, or you can make this empty too if you prefer
 selected_space_name = st.sidebar.selectbox("Select Space Model", options=list(SPACES.ROOM_DB.keys()))
 current_space_config = SPACES.ROOM_DB[selected_space_name]
 
@@ -142,12 +156,15 @@ with st.form("controls_form"):
 plot_container = st.empty()
 
 if update_plot:
+    # Get Coordinates
     coords = BQ_handler.get_xyz_coordinates(client, selected_dataset, selected_table, selected_exp)
+    
+    # Filter Snapshot
     snapshot_df = day_df[day_df['TimeStamp'] == selected_ts]
     metric_col = loaded_map[metric_choice]
 
     if not coords.empty and not snapshot_df.empty:
-        # Pass ALL new parameters: Opacity, Voxel Size, and SPACE CONFIG
+        # Pass ALL parameters: Opacity, Voxel Size, and SPACE CONFIG
         fig = GRAPH.plot_3d_room(
             snapshot_df, 
             coords, 
@@ -164,5 +181,4 @@ if update_plot:
 if st.session_state.current_fig is not None:
     plot_container.plotly_chart(st.session_state.current_fig, use_container_width=True)
 else:
-
     plot_container.info("Select settings above and click 'Update Plot'.")
