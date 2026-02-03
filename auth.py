@@ -1,13 +1,11 @@
 import os
-import json
 from dotenv import load_dotenv
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
 def get_bq_client(env_path):
     """
-    Reads the .env file and returns a connected BigQuery client.
-    Expects standard Google Service Account variable names.
+    Reads the .env file from the PC and returns a connected BigQuery client.
     """
     
     # 1. Load the environment variables
@@ -15,27 +13,27 @@ def get_bq_client(env_path):
         raise FileNotFoundError(f"❌ Error: Cannot find .env file at {env_path}")
 
     load_dotenv(env_path)
-    print("🔑 Authenticating...")
 
-    # 2. CREATE CREDENTIALS (The Clean Way)
-    # We build the dictionary using the keys Google expects directly.
-    # This matches exactly what you did in Streamlit Secrets.
-    key_dict = {
+    print("🔑 Authenticating locally...")
+
+    # 2. CREATE CREDENTIALS
+    # We map your "GCP_" names (from .env) to the standard names Google needs (Left side)
+    credentials = service_account.Credentials.from_service_account_info({
         "type": "service_account",
-        "project_id": os.getenv("project_id"),
-        "private_key_id": os.getenv("private_key_id"),
-        "private_key": os.getenv("private_key").replace("\\n", "\n") if os.getenv("private_key") else None,
-        "client_email": os.getenv("client_email"),
-        "client_id": os.getenv("client_id"),
-        "auth_uri": os.getenv("auth_uri"),
-        "token_uri": os.getenv("token_uri"),
-        "auth_provider_x509_cert_url": os.getenv("auth_provider_x509_cert_url"),
-        "client_x509_cert_url": os.getenv("client_x509_cert_url"),
-    }
+        
+        # Left side = Google's Name | Right side = Your .env Name
+        "project_id": os.environ["GCP_PROJECT_ID"],
+        "private_key_id": os.environ.get("GCP_PRIVATE_KEY_ID"), # Optional if not in .env
+        "private_key": os.environ["GCP_PRIVATE_KEY"].replace("\\n", "\n"),
+        "client_email": os.environ["GCP_CLIENT_EMAIL"],
+        "client_id": os.environ.get("GCP_CLIENT_ID"), # Optional if not in .env
+        "auth_uri": os.environ["GCP_AUTH_URI"],
+        "token_uri": os.environ["GCP_TOKEN_URI"],
+        "auth_provider_x509_cert_url": os.environ["GCP_auth_provider_x509_cert_url"],
+        "client_x509_cert_url": os.environ.get("GCP_CLIENT_X509_CERT_URL") # Optional
+    })
 
     # 3. CONFIGURE CLIENT
-    credentials = service_account.Credentials.from_service_account_info(key_dict)
-    
     bq_client = bigquery.Client(
         credentials=credentials,
         project=credentials.project_id,
