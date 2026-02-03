@@ -10,6 +10,17 @@ from google.cloud import bigquery
 st.set_page_config(page_title="3D Sensor Digital Twin", layout="wide")
 
 # ==========================================
+# 0. GLOBAL CONSTANTS (Fixes NameError)
+# ==========================================
+# We define this here so it is available everywhere (Sidebar & Main Page)
+COL_MAP = {
+    "Temperature": "SensorData_temperature",
+    "Humidity": "SensorData_humidity",
+    "Light": "SensorData_light",
+    "Battery": "SensorData_battery"
+}
+
+# ==========================================
 # 🔐 SECURE LOGIN (From Secrets)
 # ==========================================
 if 'logged_in' not in st.session_state:
@@ -19,13 +30,12 @@ def check_login():
     user = st.session_state.get("username_input", "")
     pwd = st.session_state.get("password_input", "")
     
-    # 1. Get credentials from Secrets (Secure)
+    # 1. Get credentials from Secrets
     try:
         correct_user = st.secrets["login"]["username"]
         correct_pass = st.secrets["login"]["password"]
     except KeyError:
-        # Fallback if secrets are missing (Safety)
-        st.error("❌ Login secrets are missing in Streamlit settings.")
+        st.error("❌ Login secrets are missing.")
         return
 
     # 2. Compare
@@ -37,13 +47,11 @@ def check_login():
 if not st.session_state.logged_in:
     st.title("🔒 Login Required")
     st.markdown("Please sign in to access the Digital Twin.")
-    
     with st.form("login_form"):
         st.text_input("Username", key="username_input")
         st.text_input("Password", type="password", key="password_input")
         st.form_submit_button("Login", on_click=check_login)
-        
-    st.stop()  # 🛑 STOP here
+    st.stop()
 
 # ==========================================
 # ✅ MAIN APP (Unlocked)
@@ -112,19 +120,14 @@ if selected_exp:
         st.sidebar.write(f"📅 Available: {times['start'].date()} - {times['end'].date()}")
         date_range = st.sidebar.date_input("Select Days", value=[], min_value=times['start'].date(), max_value=times['end'].date())
         
-        col_map = {
-            "Temperature": "SensorData_temperature",
-            "Humidity": "SensorData_humidity",
-            "Light": "SensorData_light",
-            "Battery": "SensorData_battery"
-        }
-        selected_params = st.sidebar.multiselect("Parameters", options=list(col_map.keys()), default=["Temperature"])
+        # We use the GLOBAL constant here
+        selected_params = st.sidebar.multiselect("Parameters", options=list(COL_MAP.keys()), default=["Temperature"])
         
         if st.sidebar.button("📥 Load Dataset", type="primary"):
              if len(date_range) > 0 and selected_params:
                 start_d = date_range[0]
                 end_d = date_range[-1]
-                db_cols = [col_map[k] for k in selected_params]
+                db_cols = [COL_MAP[k] for k in selected_params]
                 
                 with st.spinner("Fetching data from BigQuery..."):
                     data = BQ_handler.get_data_for_range(client, selected_dataset, selected_table, selected_exp, start_d, end_d, db_cols)
@@ -144,7 +147,9 @@ if day_df is None or day_df.empty:
     st.info("👈 Use the sidebar to load your experiment data first.")
     st.stop()
 
-loaded_map = {k:v for k,v in col_map.items() if k in st.session_state.loaded_params}
+# Reconstruct the map based on what was actually loaded
+# We use the GLOBAL constant here (Fixes your error!)
+loaded_map = {k:v for k,v in COL_MAP.items() if k in st.session_state.loaded_params}
 
 st.markdown(f"### 🎞️ Frame Generator ({st.session_state.loaded_range})")
 
@@ -215,16 +220,16 @@ with st.expander("⚙️ Animation Settings", expanded=True):
         st.rerun() # Refresh page to show the player
 
 # ==========================================
-# PLAYER INTERFACE (Appears after Generation)
+# PLAYER INTERFACE (Manual Slider Only)
 # ==========================================
 st.divider()
 
 if st.session_state.generated_frames:
     st.write(f"### 🎬 Playback ({len(st.session_state.playback_times)} Frames)")
     
-    # THE "INSTANT" SLIDER
+    # Simple Manual Slider
     selected_frame_time = st.select_slider(
-        "Scrub to view frame:",
+        "Scrub Timeline",
         options=st.session_state.playback_times,
         format_func=lambda x: x.strftime("%H:%M:%S")
     )
@@ -235,4 +240,3 @@ if st.session_state.generated_frames:
 
 else:
     st.info("👆 Select a range and click 'Generate' to build the animation.")
-
