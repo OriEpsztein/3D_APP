@@ -10,10 +10,8 @@ from google.cloud import bigquery
 st.set_page_config(page_title="3D Sensor Digital Twin", layout="wide")
 
 # ==========================================
-# 🔐 CUSTOM LOGIN (Moshelion / 3111)
+# 🔐 SECURE LOGIN (From Secrets)
 # ==========================================
-# This acts exactly like a login page but works with your specific password.
-
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -21,7 +19,17 @@ def check_login():
     user = st.session_state.get("username_input", "")
     pwd = st.session_state.get("password_input", "")
     
-    if user == "moshelion" and pwd == "3111":
+    # 1. Get credentials from Secrets (Secure)
+    try:
+        correct_user = st.secrets["login"]["username"]
+        correct_pass = st.secrets["login"]["password"]
+    except KeyError:
+        # Fallback if secrets are missing (Safety)
+        st.error("❌ Login secrets are missing in Streamlit settings.")
+        return
+
+    # 2. Compare
+    if user == correct_user and pwd == correct_pass:
         st.session_state.logged_in = True
     else:
         st.error("❌ Incorrect Username or Password")
@@ -35,7 +43,7 @@ if not st.session_state.logged_in:
         st.text_input("Password", type="password", key="password_input")
         st.form_submit_button("Login", on_click=check_login)
         
-    st.stop()  # 🛑 The app stops here until you log in.
+    st.stop()  # 🛑 STOP here
 
 # ==========================================
 # ✅ MAIN APP (Unlocked)
