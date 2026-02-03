@@ -49,7 +49,6 @@ if not st.session_state.logged_in:
 # ✅ MAIN APP (Unlocked)
 # ==========================================
 
-st.sidebar.success(f"👤 Welcome, {st.session_state.username_input}!")
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
     st.rerun()
@@ -236,3 +235,4 @@ if st.session_state.generated_frames:
 
 else:
     st.info("👆 Select a range and click 'Generate' to build the animation.")
+
