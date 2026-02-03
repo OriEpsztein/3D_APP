@@ -8,7 +8,45 @@ from google.cloud import bigquery
 
 # --- 1. Page Setup ---
 st.set_page_config(page_title="3D Sensor Digital Twin", layout="wide")
-st.title("🧪 3D Experiment Player (Unrestricted)")
+
+# ==========================================
+# 🔐 CUSTOM LOGIN (Moshelion / 3111)
+# ==========================================
+# This acts exactly like a login page but works with your specific password.
+
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+def check_login():
+    user = st.session_state.get("username_input", "")
+    pwd = st.session_state.get("password_input", "")
+    
+    if user == "moshelion" and pwd == "3111":
+        st.session_state.logged_in = True
+    else:
+        st.error("❌ Incorrect Username or Password")
+
+if not st.session_state.logged_in:
+    st.title("🔒 Login Required")
+    st.markdown("Please sign in to access the Digital Twin.")
+    
+    with st.form("login_form"):
+        st.text_input("Username", key="username_input")
+        st.text_input("Password", type="password", key="password_input")
+        st.form_submit_button("Login", on_click=check_login)
+        
+    st.stop()  # 🛑 The app stops here until you log in.
+
+# ==========================================
+# ✅ MAIN APP (Unlocked)
+# ==========================================
+
+st.sidebar.success(f"👤 Welcome, {st.session_state.username_input}!")
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.rerun()
+
+st.title("🧪 3D Experiment Player")
 
 # --- 2. Connection ---
 @st.cache_resource
