@@ -20,10 +20,10 @@ def get_bq_client(env_path):
     credentials = service_account.Credentials.from_service_account_info({
         "type": "service_account",
         "project_id": os.environ["GCP_PROJECT_ID"],
-        "client_email": os.environ["GCP_CLIENT_EMAIL"],
+        "client_email": os.environ["client_email"],
         "private_key": os.environ["GCP_PRIVATE_KEY"].replace("\\n", "\n"),
         "auth_uri": os.environ["GCP_AUTH_URI"],
-        "token_uri": os.environ["GCP_TOKEN_URI"],
+        "token_uri": os.environ["token_uri"],
         "auth_provider_x509_cert_url": os.environ["GCP_auth_provider_x509_cert_url"],
     })
 
@@ -33,4 +33,5 @@ def get_bq_client(env_path):
         project=credentials.project_id,
     )
     
+
     return bq_client
